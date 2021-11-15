@@ -7,4 +7,4 @@ all = $(TARGET)
 $(TARGET) : $(OBJECTS)
 	$(CC) $(CFLAG) $^ -o $@
 clean :
-	rm langdump formula
+	rm langdump
