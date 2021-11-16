@@ -1,3 +1,4 @@
 a.out
 *.exe
 .DS_Store
+test.c
