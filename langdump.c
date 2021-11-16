@@ -7,10 +7,15 @@
 void check_input();
 FILE *open_file(char *gramFile);
 void validate_input(int max_length);
-
-void start_bin(FILE *file, int max_length);
+void start_prog(FILE *file, int max_length);
 char *trim(char *str);
-void *trim_quote(char *str);
+void trim_quote(char *str);
+char* my_trim(char* str);
+void print_gram(char **symbols, int symb_count, char ***sequences, int seq_count);
+void gram_recursive(char *target, char **symbols, int symb_count, char ***sequences, int seq_count, int max);
+int symbol_exist(char *target, char **symbols, int symb_count);
+int symbol_index(char *target, char **symbols, int symb_count);
+char* replace_sub(char *target, char *sub, int index);
 
 int main(int argc, char **args)
 {
@@ -18,39 +23,12 @@ int main(int argc, char **args)
     int max_length = atoi(args[2]);
 
     validate_input(max_length);
-    FILE *fptr = open_file(gramFile);
+    FILE *fp = open_file(gramFile);
 
-    int prob_num = 0;
-    if (strcmp(gramFile, "bi_gram.txt") == 0)
-    {
-        prob_num = 1;
-    }
-    else if (strcmp(gramFile, "par_gram.txt") == 0)
-    {
-        prob_num = 2;
-    }
-    else if (strcmp(gramFile, "arith_gram.txt") == 0)
-    {
-        prob_num = 3;
-    }
+    start_prog(fp, max_length);
 
-    // printf("%d\n", (int)('"'));
-    start_bin(fptr, max_length);
+    fclose(fp);
 
-    // switch (prob_num)
-    // {
-    // case 1:
-    //     start_bin(fptr, rules, max_length);
-    //     break;
-    // case 2:
-    //     break;
-    // case 3:
-    //     break;
-    // default:
-    //     break;
-    // }
-
-    fclose(fptr);
     return 0;
 }
 
@@ -65,17 +43,17 @@ void check_input(int argc, char **args)
 
 FILE *open_file(char *gramFile)
 {
-    FILE *fptr;
+    FILE *fp;
 
-    fptr = fopen(gramFile, "r");
+    fp = fopen(gramFile, "r");
 
-    if (fptr == NULL)
+    if (fp == NULL)
     {
         printf("[FILE ERROR] Cannot open file \n");
         exit(0);
     }
 
-    return fptr;
+    return fp;
 }
 
 void validate_input(int max_length)
@@ -87,12 +65,23 @@ void validate_input(int max_length)
     }
 }
 
-void start_bin(FILE *file, int max_length)
+void start_prog(FILE *file, int max_length)
 {
-    char symbols[32][2];
+    char **symbols = (char**)malloc(100 * sizeof(char *));
+    for(int i=0; i<32; i++){
+        symbols[i] = (char *)malloc(16 * sizeof(char));
+    }
     int symb_count = 0;
 
-    char sequences[32][64];
+    char*** sequences = (char***)malloc(100 * sizeof(char**));
+    for (int i = 0; i < 32; i++)
+    {
+        sequences[i] = (char**)malloc(32 * sizeof(char*));
+        for (int j = 0; j < 3; j++)
+        {
+            sequences[i][j] = (char*)malloc(64 * sizeof(char));
+        }
+    }
     int seq_count = 0;
 
     char line[64];
@@ -100,20 +89,32 @@ void start_bin(FILE *file, int max_length)
     {
         char *token = strtok(line, ":==");
         token = trim(token);
-        strcpy(symbols[symb_count], token);
-        symb_count++;
 
-        token = strtok(NULL, ":==");
-        token = trim(token);
-        
-        // trim_quote(token);
-        strcpy(sequences[seq_count], token);
-        seq_count++;
+        if(token[0] == 'S') {
+            token = strtok(NULL, ":==");
+            token = trim(token);
+            trim_quote(token);
+            token = my_trim(token);
+
+            strcpy(symbols[symb_count], token);
+            symb_count++;
+        }else{
+            strcpy(sequences[seq_count][0], token);
+
+            token = strtok(NULL, ":==");
+            token = trim(token);
+            trim_quote(token);
+            token = my_trim(token);
+
+            strcpy(sequences[seq_count][1], token);
+
+            seq_count++;
+        }
     }
 
-    for(int i=0; i<symb_count; i++){
-        printf("%s : %s\n", symbols[i], sequences[i]);
-    }
+    print_gram(symbols, symb_count, sequences, seq_count);
+
+    gram_recursive(symbols[0], symbols, symb_count, sequences, seq_count, max_length);
 }
 
 // https://www.delftstack.com/ko/howto/c/trim-string-in-c/
@@ -134,37 +135,101 @@ char *trim(char *str)
     return str;
 }
 
-void *trim_quote(char *str){
-    // char *token = strtok(str, "\"");
-    // while (token != NULL)  
-    // {
-    //     printf("%s\n", token);
-    //     // Your deletion logic goes here.
-    //     token = strtok(NULL, "\"");
-    // }
-    // char str1[99];
-    // int j=0;
-    // for(int i=0; i<strlen(str); i++){
-    //     printf("%d", (int)str[i]);
-    //     // if(str[i] == (int)'"'){
-    //     //     printf("%c\n", i);
-    //     // }
-    // }printf("\n");
+void trim_quote(char *str){
+    for(int i=0; i<(int)strlen(str); i++){
+        if(str[i] == '"') str[i] = ' ';
+    }
+}
 
-    // printf("%s\n", str1);
+char* my_trim(char* str)
+{
+    static char trimmed[64];
+    int trimmed_count = 0;
 
-    // return str;
-    // char *end;
+    for(int i=0; i<(int)strlen(str); i++){
+        if(str[i] != 32){
+            trimmed[trimmed_count] = str[i];
+            trimmed_count++;
+        }
+    }
 
-    // while((unsigned char)*str == '"') str++;
+    trimmed[trimmed_count] = '\0';
+  
+    return trimmed;
+}
 
-    // if(*str == 0)
-    //     return str;
+void print_gram(char **symbols, int symb_count, char ***sequences, int seq_count){
+    printf("Symbols\n");
+    for(int i=0; i<symb_count; i++){
+        printf("%c\n", symbols[i][0]);
+    }
 
-    // end = str + strlen(str) - 1;
-    // while(end > str && (unsigned char)*end == '"') end--;
+    printf("\nSymbols : Expressions\n");
+    for(int i=0; i<seq_count; i++){
+        printf("%c : %s\n", sequences[i][0][0], sequences[i][1]);
+    }
 
-    // end[1] = '\0';
+    printf("\n===========================\n\n");
+}
 
-    // return str;
+void gram_recursive(char *target, char **symbols, int symb_count, char ***sequences, int seq_count, int max){
+    if((int)strlen(target) > max){
+    }else if(symbol_exist(target, symbols, symb_count) == 0){
+        printf("%s\n", target);
+    }else{
+        int index = symbol_index(target, symbols, symb_count);
+        char *send = (char*)malloc(64 * sizeof(char));
+
+        for(int i=0; i<seq_count; i++){
+            if(target[index] == sequences[i][0][0]){
+                if((int)strlen(target) == 1){
+                    send = sequences[i][1];
+                }else{
+                    send = replace_sub(target, sequences[i][1], index);
+                }
+                gram_recursive(send, symbols, symb_count, sequences, seq_count, max);
+            }
+        }
+    }
+}
+
+int symbol_exist(char *target, char **symbols, int symb_count){
+    for(int i=0; i<symb_count; i++){
+        for(int j=0; j<(int)strlen(target); j++){
+            if(target[j] == symbols[i][0]) return 1;
+        }
+    }
+    return 0;
+}
+
+int symbol_index(char *target, char **symbols, int symb_count){
+    for(int i=0; i<symb_count; i++){
+        for(int j=0; j<(int)strlen(target); j++){
+            if(target[j] == symbols[i][0]) return j;
+        }
+    }
+    return 0;
+}
+
+char* replace_sub(char *target, char *sub, int index)
+{
+    char *result = (char*)malloc(64 * sizeof(char));
+
+    int sub_len = (int)strlen(sub);
+
+    for(int i=0; i<index; i++){
+        result[i] = target[i];
+    }
+
+    strcat(result, sub);
+
+    int x = index+1;
+    int y = index+sub_len;
+    while(x < (int)strlen(target)){
+        result[y] = target[x];
+        x++;
+        y++;
+    }
+
+    return result;
 }
