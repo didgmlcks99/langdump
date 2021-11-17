@@ -4,7 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 
-void check_input();
+void check_input(int argc, char **args);
 FILE *open_file(char *gramFile);
 void validate_input(int max_length);
 void start_prog(FILE *file, int max_length);
